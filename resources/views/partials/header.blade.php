@@ -6,10 +6,13 @@
                 <li><a href="{{ route('blog.index') }}">Blog</a></li>
                 <li><a href="{{ route('other.about') }}">About</a></li>
                 <li><a href="{{ route('tutorial.index') }}">Tutorials</a></li>
-                <li class=""><a href="{{ route('admin.index') }}">Posts</a></li>
-                <li class=""><a href="{{ route('admin.tutorialList') }}">Manage Tutorials</a></li>
+
+                @if(!Auth::check())
                 <li><a href="{{ url('/login') }}">Login</a></li>
                 <li><a href="{{ url('/register') }}">Register</a></li>
+                @else
+                <li class=""><a href="{{ route('admin.index') }}">Manage Posts</a></li>
+                <li class=""><a href="{{ route('admin.tutorialList') }}">Manage Tutorials</a></li>
                 <li><a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault();
                                                      document.getElementById('logout-form').submit();">
                         {{ __('Logout') }}
@@ -19,6 +22,7 @@
                         @csrf
                     </form>
                 </li>
+                @endif
             </ul>
         </div>
     </div>
