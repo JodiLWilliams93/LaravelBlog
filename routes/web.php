@@ -50,10 +50,10 @@ Route::get('guide/{id}/thumbsDown', [
     'as' => 'tutorial.guide.thumbsdown'
 ]);
 
-Route::group(['prefix' => 'admin'], function() {
+Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
     Route::get('', [
         'uses' => 'PostController@getAdminIndex',
-        'as' => 'admin.index'
+        'as' => 'admin.index',
     ]);
     
     Route::get('create', [
