@@ -46,10 +46,10 @@ class PostController extends Controller {
     }
 
     public function getAdminEdit($id) {
-        
-        $user = Auth::user();
-        if (!$user) {
-            return redirect()->back();
+
+        $post = POST::find($id);
+        if (Gate::denies('manipulate-post', $post)) {
+            return redirect()->route('admin.index')->with('info', 'User does not have permission to edit post: "' . $post->title . '"');
         }
         $tags = Tag::all();
         $post = Post::find($id);
@@ -60,7 +60,7 @@ class PostController extends Controller {
        
         $post = Post::find($id);
         if (Gate::denies('manipulate-post', $post)) {
-            return redirect()->back();
+            return redirect()->route('admin.index')->with('info', 'User does not have permission to delete post: "' . $post->title . '"');
         }
         $post->likes()->delete();
         $post->tags()->detach();
@@ -96,7 +96,7 @@ class PostController extends Controller {
         ]);
         $post = POST::find($request->input('id'));
         if (Gate::denies( 'manipulate-post', $post)) {
-            return redirect()->back();
+            return redirect()->route('admin.index')->with('info', 'User does not have permission to edit post: "' . $request->input('title') . '"');
         }
         $post->title = $request->input('title');
         $post->content = $request->input('content');
