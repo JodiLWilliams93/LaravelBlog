@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Meeting;
+use JWTAuth;
 
 class MeetingController extends Controller
 {
 
     public function __construct()
     {
-        //$this->middleware('');
+        $this->middleware('jwt.auth', ['only' => [
+            'store', 'update', 'destroy'
+        ]]);
     }
     /**
      * Display a listing of the resource.
@@ -21,7 +24,7 @@ class MeetingController extends Controller
     {   $meetings = Meeting::all();
         foreach ($meetings as $meeting) {
             $meeting->view_meeting = [
-                'href' => 'api/v1/meeting' . $meeting->id,
+                'href' => '/api/v1/meeting/' . $meeting->id,
                 'method' => 'GET'
             ];
         }
@@ -46,13 +49,17 @@ class MeetingController extends Controller
         $this->validate($request, [
             'title' => 'required',
             'description' => 'required',
-            'time' => 'required|date_format:Y/m/d H:i',
-            'user_id' => 'required'
+            'time' => 'required|date_format:Y/m/d H:i'
         ]);
+
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['msg' => 'User not found'], 404);
+        }
+
         $title = $request->input('title');
         $description = $request->input('description');
         $time = $request->input('time');
-        $user_id = $request->input('user_id');
+        $user_id = $user->id;
 
         $meeting = new Meeting ([
             'title' => $title,
@@ -64,7 +71,7 @@ class MeetingController extends Controller
         if ($meeting->save()){
             $meeting->users()->attach($user_id);
             $meeting->view_meeting = [
-                'href' => 'api/v1/meeting/' . $meeting->id,
+                'href' => '/api/v1/meeting/' . $meeting->id,
                 'method' => 'GET'
             ];
             $response = ['msg' => 'Meeting created', 'meeting' => $meeting];
@@ -85,7 +92,7 @@ class MeetingController extends Controller
     public function show($id)
     {   $meeting = Meeting::with('users')->where('id', $id)->firstOrFail();
         $meeting->view_meeting =[
-            'href' => 'api/v1/meeting/' . $meeting->id,
+            'href' => '/api/v1/meeting/' . $meeting->id,
             'method' => 'GET'
         ];
 
@@ -106,14 +113,18 @@ class MeetingController extends Controller
         $this->validate($request, [
             'title' => 'required',
             'description' => 'required',
-            'time' => 'required|date_format:Y/m/d H:i',
-            'user_id' => 'required'
+            'time' => 'required|date_format:Y/m/d H:i'
         ]);
+
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['msg' => 'User not found'], 404);
+        }
+
 
         $title = $request->input('title');
         $description = $request->input('description');
         $time = $request->input('time');
-        $user_id = $request->input('user_id');
+        $user_id = $user->id;
 
         $meeting = Meeting::with('users')->findOrFail($id);
 
@@ -130,7 +141,7 @@ class MeetingController extends Controller
         }
 
         $meeting->view_meeting = [
-            'href' => 'api/v1/meeting/1',
+            'href' => '/api/v1/meeting/1',
             'method' => 'GET'
         ];
         
@@ -149,8 +160,16 @@ class MeetingController extends Controller
     public function destroy($id)
     {
         $meeting = Meeting::findorFail($id);
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['msg' => 'User not found'], 404);
+        }
+
+        if (!$meeting->users()->where('users.id', $user->id)->first()) {
+            return response()->json(['msg' => 'user not registered for meeting, update not successful'], 401);
+        }
+
         $users = $meeting->users;
-        $meeting->$users()->detach();
+        $meeting->users()->detach();
 
         if(!$meeting->delete()) {
             foreach ($users as $user) {
@@ -161,9 +180,9 @@ class MeetingController extends Controller
         }
         
         $response = [
-            'msg' => 'Meeting created', 
+            'msg' => 'Meeting deleted', 
             'create' => [
-                'href' => 'api/v1/meeting',
+                'href' => '/api/v1/meeting',
                 'method' => 'POST',
                 'params' => 'title, description, time'
             ]

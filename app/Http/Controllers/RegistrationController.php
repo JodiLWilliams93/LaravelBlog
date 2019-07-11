@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Meeting;
 use App\User;
+use JWTAuth;
 
 class RegistrationController extends Controller
 {
-
+    public function __construct()
+    {
+        $this->middleware('jwt.auth');
+    }
 
     /**
      * Store a newly created resource in storage.
@@ -34,7 +38,7 @@ class RegistrationController extends Controller
             'user' => $user,
             'meeting' => $meeting,
             'unregister' => [
-                'href' => 'api/v1/meeting/registration/' . $meeting->id,
+                'href' => '/api/v1/meeting/registration/' . $meeting->id,
                 'method' => 'DELETE'
             ]
         ];
@@ -49,7 +53,7 @@ class RegistrationController extends Controller
             'meeting' => $meeting,
             'user' => $user,
             'unregister' => [
-                'href' => 'api/v1/meeting/registration/1',
+                'href' => '/api/v1/meeting/registration/1',
                 'method' => 'DELETE'
             ]
         ];
@@ -69,27 +73,22 @@ class RegistrationController extends Controller
     public function destroy($id)
     {
         $meeting = Meeting::findOrFail($id);
-        $meeting->users()->detach();
 
-        $meeting = [
-            'title' => 'Title',
-            'description' => 'Description',
-            'time' => 'Time',
-            'view_meeting' => [
-                'href' => 'api/v1/meeting/1',
-                'method' => 'GET'
-            ]
-        ];
-        $user = [
-            'name' => 'Name'
-        ];
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['msg' => 'User not found'], 404);
+        }
 
+        if (!$meeting->users()->where('users.id', $user->id)->first()) {
+            return response()->json(['msg' => 'user not registered for meeting, update not successful'], 401);
+        }
+
+        $meeting->users()->detach($user->id);
         $response = [
             'msg' => 'User unregistered for meeting',
             'meeting' => $meeting,
             'user' => $user,
             'register' => [
-                'href' => 'api/v1/meeting/registration',
+                'href' => '/api/v1/meeting/registration',
                 'method' => 'POST',
                 'params' => 'user_id, meeting_id'
             ]
