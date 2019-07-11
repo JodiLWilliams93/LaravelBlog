@@ -19,6 +19,11 @@ class Tutorial extends Model {
     {
         return $this->belongsToMany('App\Tutorial', 'related_tutorials', 'tutorial_id', 'related_tutorial_id');
     }
+
+    public function user()
+    {
+        return $this->belongsTo('App\User');
+    }
     
 }
 

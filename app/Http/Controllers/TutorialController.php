@@ -7,6 +7,8 @@ use \App\RelatedTutorial;
 use \App\ThumbsUp;
 use \App\ThumbsDown;
 use Illuminate\Http\Request;
+use Auth;
+use Gate;
 
 class TutorialController extends Controller {
     
@@ -48,11 +50,20 @@ class TutorialController extends Controller {
             'title' => 'required|min:5',
             'content' => 'required|min:10'
         ]);
+
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('admin.index')->with('info', 'Log in for this action to work!');
+        }
+
         $tutorial = new Tutorial([
             'title' => $request->input('title'),
             'content' => $request->input('content'),
+
         ]);
-        $tutorial->save();
+
+        $user->tutorials()->save($tutorial);
+        
         $tutorial->relatedTutorials()->attach($request->input('relatedTutorials') === null ? [] : $request->input('relatedTutorials'));
         
         return redirect()->route('admin.tutorialList')->with('info', 'Tutorial created, Title is: ' . $request->input('title'));
@@ -65,6 +76,11 @@ class TutorialController extends Controller {
     }
 
     public function getTutorialEdit($id) {
+        $tutorial = Tutorial::find($id);
+        if (Gate::denies('manipulate-tutorial', $tutorial)) {
+            $message = 'User does not have permission to edit tutorial: "' . $tutorial->title . '"';
+            return redirect()->route('admin.tutorialList')->with('info', $message);
+        }
         $relatedTutorials = Tutorial::all();
         $tutorial = Tutorial::find($id);
         return view('admin.tutorialEdit', ['tutorial' => $tutorial, 'relatedTutorials' => $relatedTutorials]);
@@ -75,7 +91,12 @@ class TutorialController extends Controller {
             'title' => 'required|min:5',
             'content' => 'required|min:10'
         ]);
+
         $tutorial = Tutorial::find($request->input('id'));
+        if (Gate::denies('manipulate-tutorial', $tutorial)) {
+            $message = 'User does not have permission to edit tutorial: "' . $tutorial->title . '"';
+            return redirect()->route('admin.tutorialList')->with('info', $message);
+        }
         $tutorial->title = $request->input('title');
         $tutorial->content = $request->input('content');
         $tutorial->save();
@@ -86,6 +107,10 @@ class TutorialController extends Controller {
 
     public function getTutorialDelete($id) {
         $tutorial = Tutorial::find($id);
+        if (Gate::denies('manipulate-tutorial', $tutorial)) {
+            $message = 'User does not have permission to delete tutorial: "' . $tutorial->title . '"';
+            return redirect()->route('admin.tutorialList')->with('info', $message);
+        }
         $tutorial->thumbsUps()->delete();
         $tutorial->thumbsDowns ()->delete();
         $tutorial->relatedTutorials()->detach();

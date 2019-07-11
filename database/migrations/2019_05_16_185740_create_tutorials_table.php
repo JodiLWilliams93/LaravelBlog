@@ -18,6 +18,8 @@ class CreateTutorialsTable extends Migration
             $table->timestamps();
             $table->string('title');
             $table->string('content');
+            $table->integer('user_id');
+
         });
     }
 
